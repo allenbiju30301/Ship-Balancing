@@ -6,11 +6,15 @@ import itertools
 counter = itertools.count()
 ROWS = 8
 COLS = 12
-PARK_POS = (ROWS, 0)  # same as in main
+PARK_POS = (7, 0)  # Park at [08, 01] in display coordinates (row 8 = index 7, col 1 = index 0)
 
 # ------------------------
 # Utility Functions
 # ------------------------
+
+def manhattan_distance(start, goal):
+    """Calculate Manhattan distance between two positions."""
+    return abs(start[0] - goal[0]) + abs(start[1] - goal[1])
 
 def buildSlotMatrix(slotExists):
     """
@@ -114,7 +118,9 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
         if balanced:
             return path, layout
 
-        # Deterministic container selection: row-major order
+        # Deterministic container selection: prioritize containers closer to starboard/destinations
+        # Collect all movable containers first
+        movable_containers = []
         for r1 in range(ROWS):
             for c1 in range(COLS):
                 if not slotMatrix[r1][c1]:
@@ -123,42 +129,45 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                     continue
                 if not topOfStack(layout, r1, c1):
                     continue
+                movable_containers.append((r1, c1))
+        
+        # Sort by column (prefer containers closer to middle/starboard for balancing)
+        movable_containers.sort(key=lambda pos: (pos[0], -pos[1]))
+        
+        for r1, c1 in movable_containers:
+            w = layout[r1][c1]
 
-                w = layout[r1][c1]
+            # Try placing in all available slots
+            for r2 in range(ROWS):
+                for c2 in range(COLS):
+                    if not slotMatrix[r2][c2] or layout[r2][c2] != "UNUSED":
+                        continue
+                    if (r1, c1) == (r2, c2):
+                        continue
+                    if not supported(layout, r2, c2):
+                        continue
 
-                # Try placing in all available slots
-                for r2 in range(ROWS):
-                    for c2 in range(COLS):
-                        if not slotMatrix[r2][c2] or layout[r2][c2] != "UNUSED":
-                            continue
-                        if (r1, c1) == (r2, c2):
-                            continue
-                        if not supported(layout, r2, c2):
-                            continue
+                    dist1 = manhattan_distance(cranePos, (r1, c1))
+                    dist2 = manhattan_distance((r1, c1), (r2, c2))
 
-                        dist1 = bfs_distance(layout, cranePos, (r1, c1), ignoreContainers=True)
-                        dist2 = bfs_distance(layout, (r1, c1), (r2, c2), ignoreContainers=False)
-                        if dist1 is None or dist2 is None:
-                            continue
+                    newG = g + dist1 + dist2
+                    newGrid = deepcopy(layout)
+                    newGrid[r1][c1] = "UNUSED"
+                    newGrid[r2][c2] = w
 
-                        newG = g + dist1 + dist2
-                        newGrid = deepcopy(layout)
-                        newGrid[r1][c1] = "UNUSED"
-                        newGrid[r2][c2] = w
+                    newKey = gridKey(newGrid)
+                    stateKey = (newKey, (r2, c2))
+                    if stateKey in visited and visited[stateKey] <= newG:
+                        continue
+                    visited[stateKey] = newG
 
-                        newKey = gridKey(newGrid)
-                        stateKey = (newKey, (r2, c2))
-                        if stateKey in visited and visited[stateKey] <= newG:
-                            continue
-                        visited[stateKey] = newG
+                    h = imbalance(newGrid, balanceFunc) / maxW
+                    newF = newG + h
+                    newPath = path + [((r1, c1), (r2, c2))]
 
-                        h = imbalance(newGrid, balanceFunc) / maxW
-                        newF = newG + h
-                        newPath = path + [((r1, c1), (r2, c2))]
-
-                        heapq.heappush(
-                            openSet,
-                            (newF, r2, c2, next(counter), newG, newGrid, newPath, (r2, c2))
-                        )
+                    heapq.heappush(
+                        openSet,
+                        (newF, r2, c2, next(counter), newG, newGrid, newPath, (r2, c2))
+                    )
 
     return None, None
