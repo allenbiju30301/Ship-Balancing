@@ -22,25 +22,64 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         return None
 
     weight_to_container = {c['weight']: c for c in containers}
+    
+    # Count total number of steps (crane movements + container movements + return to park)
+    numSteps = 0
+    crane = PARK_POS
+    tempGrid = [row[:] for row in grid]
+    
+    for src, dst in moves:
+        # Count crane movement to source (if needed)
+        if crane != src:
+            numSteps += 1
+        # Count container move
+        numSteps += 1
+        # Update position for next iteration
+        if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
+            w = tempGrid[src[0]][src[1]]
+            tempGrid[src[0]][src[1]] = "UNUSED"
+            if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
+                tempGrid[dst[0]][dst[1]] = w
+        crane = dst
+    
+    # Count return to park
+    if crane != PARK_POS:
+        numSteps += 1
+    
+    print("Solution has been found, it will take")
+    print(f"{numSteps} move{'s' if numSteps != 1 else ''}")
+
+    # Compute total time by simulating the execution with the original grid
     total_time = 0
     crane = PARK_POS
-    numMoves = len(moves)
-    print("Solution has been found, it will take")
-    print(f"{numMoves} move{'s' if numMoves != 1 else ''}")
-
-    # Compute total time using BFS distances
-    tempGrid = [row[:] for row in finalGrid]  # Use finalGrid for distance calculations
+    tempGrid = [row[:] for row in grid]  # Start with original grid state
+    
     for src, dst in moves:
-        dist = 0
+        # Time to move crane to source
         if crane != src:
             d = bfs_distance(tempGrid, crane, src, ignoreContainers=True)
             if d is not None:
-                dist += d
+                total_time += d
+        
+        # Time to move container from source to destination
         d = bfs_distance(tempGrid, src, dst, ignoreContainers=False)
         if d is not None:
-            dist += d
-        total_time += dist
+            total_time += d
+        
+        # Update temp grid to reflect the move
+        if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
+            w = tempGrid[src[0]][src[1]]
+            tempGrid[src[0]][src[1]] = "UNUSED"
+            if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
+                tempGrid[dst[0]][dst[1]] = w
+        
         crane = dst
+    
+    # Time to return crane to park
+    if crane != PARK_POS:
+        d = bfs_distance(tempGrid, crane, PARK_POS, ignoreContainers=True)
+        if d is not None:
+            total_time += d
 
     print(f"{total_time} minutes (including movement from/to parked position)")
     print("Hit ENTER when ready for first move\n")
@@ -133,7 +172,7 @@ def main():
             if finalGrid is None:
                 continue
 
-        # Clean output filename — NO double _OUTBOUND
+        # Clean output filename
         base = os.path.splitext(os.path.basename(path))[0]
         outName = base
 

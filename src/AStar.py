@@ -24,7 +24,6 @@ def buildSlotMatrix(slotExists):
     """
     matrix = [[False for _ in range(COLS)] for _ in range(ROWS)]
     
-    print(f"DEBUG buildSlotMatrix: Processing {len(slotExists)} slots")
     for (r, c), exists in slotExists.items():
         # slotExists uses 1-indexed coordinates from manifest
         # Convert to 0-indexed for grid
@@ -32,8 +31,6 @@ def buildSlotMatrix(slotExists):
         c_idx = c - 1
         if 0 <= r_idx < ROWS and 0 <= c_idx < COLS:
             matrix[r_idx][c_idx] = exists
-            if exists and r == 1:  # Debug row 1 only
-                print(f"  Slot ({r},{c}) -> grid[{r_idx}][{c_idx}] = {exists}")
     
     return matrix
 
@@ -99,13 +96,6 @@ def imbalance(grid, balanceFunc):
 
 def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
     """Deterministic A* to balance ship containers."""
-    print(f"DEBUG: Starting A* with {len(containers)} containers")
-    print(f"DEBUG: Crane starts at {craneStart}")
-    
-    # Print initial balance
-    balanced, port, star = balanceFunc(grid)
-    print(f"DEBUG: Initial state - Balanced: {balanced}, Port: {port}, Star: {star}")
-    
     if len(containers) <= 1:
         return [], grid
 
@@ -117,24 +107,14 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
     heapq.heappush(openSet, (initial_h, 0, 0, next(counter), 0, grid, [], craneStart))
     visited = {(startKey, craneStart): 0}
 
-    iterations = 0
     while openSet:
-        iterations += 1
-        if iterations % 100 == 0:
-            print(f"DEBUG: Iteration {iterations}, open set size: {len(openSet)}")
-        
         f, _, _, _, g, layout, path, cranePos = heapq.heappop(openSet)
         balanced, p, s = balanceFunc(layout)
         
         if balanced:
-            print(f"DEBUG: Found solution after {iterations} iterations!")
-            print(f"DEBUG: Solution path: {path}")
-            print(f"DEBUG: Solution g-cost: {g}")
-            # Just return the container moves, don't add park moves here
             return path, layout
 
         # Deterministic container selection: row-major order
-        moves_tried = 0
         for r1 in range(ROWS):
             for c1 in range(COLS):
                 if not slotMatrix[r1][c1]:
@@ -159,11 +139,8 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                         dist1 = bfs_distance(layout, cranePos, (r1, c1), ignoreContainers=True)
                         dist2 = bfs_distance(layout, (r1, c1), (r2, c2), ignoreContainers=False)
                         if dist1 is None or dist2 is None:
-                            if iterations <= 2:
-                                print(f"DEBUG: BFS failed - crane {cranePos} to container ({r1},{c1}): {dist1}, container to ({r2},{c2}): {dist2}")
                             continue
 
-                        moves_tried += 1
                         newG = g + dist1 + dist2
                         newGrid = deepcopy(layout)
                         newGrid[r1][c1] = "UNUSED"
@@ -179,17 +156,9 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                         newF = newG + h
                         newPath = path + [((r1, c1), (r2, c2))]
 
-                        if iterations <= 2:
-                            bal, p2, s2 = balanceFunc(newGrid)
-                            print(f"DEBUG: Move ({r1},{c1})->{r2},{c2}), New balance: {bal}, Port: {p2}, Star: {s2}")
-
                         heapq.heappush(
                             openSet,
                             (newF, r2, c2, next(counter), newG, newGrid, newPath, (r2, c2))
                         )
-        
-        if iterations <= 2:
-            print(f"DEBUG: Tried {moves_tried} moves this iteration")
 
-    print(f"DEBUG: No solution found after {iterations} iterations")
     return None, None
