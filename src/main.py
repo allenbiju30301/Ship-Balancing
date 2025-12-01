@@ -4,6 +4,7 @@ from manifest import writeOutboundManifest
 from isBalanced import isShipBalanced
 from AStar import aStar, buildSlotMatrix, manhattan_distance
 from visualize import visualizeGrid as vis
+from logger import log_event, log_user_comment, save_log
 
 ROWS = 8
 COLS = 12
@@ -19,6 +20,7 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
     moves, finalGrid = aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS)
     if moves is None:
         print("No valid solution could be found.")
+        log_event("No valid balance solution could be found.")
         return None
 
     weight_to_container = {c['weight']: c for c in containers}
@@ -79,7 +81,9 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         total_time += d
 
     print(f"{total_time} minutes (including movement from/to parked position)")
-    print("Hit ENTER when ready for first move\n")
+    log_event(f"Balance solution found, it will require {numSteps} moves/{total_time} minutes.")
+    
+    print("Hit ENTER when ready for first move:\n")
     input()
 
     # -------------------------
@@ -108,13 +112,21 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         if container_info:
             move_time = manhattan_distance(src, dst)
             print(f"{step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)} ({move_time} minutes)")
+            log_event(f"{fmt_cell(src)} was moved to {fmt_cell(dst)}")
+            
             # Update execGrid to reflect the move
             if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
                 execGrid[dst[0]][dst[1]] = cell_value
             if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
                 execGrid[src[0]][src[1]] = "UNUSED"
             container_info['pos'] = dst
-            input("Hit ENTER when done\n")
+            
+            # Offer option to add user comment after each move
+            print("Press 'c' to add a comment, or just ENTER to continue: \n", end='')
+            user_input = input().strip().lower()
+            if user_input == 'c':
+                log_user_comment()
+            
             step += 1
             crane = dst
 
@@ -136,10 +148,14 @@ def fmt_cell(rc):
 
 
 def main():
+    log_event("Program was started.")
+    
     while True:
         print("-------------------------------------------------")
         filename = input("Enter a manifest: (or press ENTER to quit): ").strip()
         if filename == "":
+            log_event("Program was shut down.")
+            save_log()
             print("Goodbye.")
             break
 
@@ -155,12 +171,15 @@ def main():
         grid, slotExists, containers, contents_map = parseManifest(lines)
         slotMatrix = buildSlotMatrix(slotExists)
 
+        log_event(f"Manifest {filename} is opened, there are {len(containers)} containers on the ship.")
+
         balanced, port, star = isShipBalanced(grid)
         
         vis(grid)
         
         if balanced:
             print("\nShip is already legally balanced.")
+            log_event("Ship is already balanced. No moves needed.")
             finalGrid = grid
         else:
             finalGrid = run_instructions(path, grid, slotMatrix, containers, isShipBalanced)
@@ -174,6 +193,8 @@ def main():
         writeOutboundManifest(outName, lines, finalGrid, contents_map)
 
         print(f"\nI have written an updated manifest as {outName}_OUTBOUND.txt")
+        log_event(f"Finished a Cycle. Manifest {outName}_OUTBOUND.txt was written to desktop, and a reminder pop-up to operator to send file was displayed.")
+        
         print("Don't forget to email it to the captain.")
         print("Hit ENTER when done.\n")
         input()
