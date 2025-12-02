@@ -4,6 +4,7 @@ from manifest import writeOutboundManifest
 from isBalanced import isShipBalanced
 from AStar import aStar, buildSlotMatrix, manhattan_distance
 from visualize import visualizeGrid as vis
+from visualize import visMove
 from logger import log_event, log_user_comment, save_log
 
 ROWS = 8
@@ -87,22 +88,27 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
     input()
 
     # -------------------------
-    # PRINT EXECUTION STEPS
+    # PRINT EXECUTION STEPS WITH FULL VISUALIZATION
     # -------------------------
     step = 1
     crane = PARK_POS
-    execGrid = [row[:] for row in grid]  # Use ORIGINAL grid, not finalGrid
-    
+    execGrid = [row[:] for row in grid]  # Use ORIGINAL grid
+
     for src, dst in moves:
-        # Move crane from park/current position to source
+        # -------------------------
+        # 1. Crane moves to source
+        # -------------------------
         if crane != src:
             move_time = manhattan_distance(crane, src)
             print(f"{step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)} ({move_time} minutes)")
+            visMove(execGrid, crane_pos=src)  # show crane moving, no container yet
             input("Hit ENTER when done\n")
             step += 1
             crane = src
 
-        # Pick up and move container
+        # -------------------------
+        # 2. Pick up and move container
+        # -------------------------
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
             cell_value = execGrid[src[0]][src[1]]
             container_info = weight_to_container.get(cell_value, None)
@@ -112,30 +118,42 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         if container_info:
             move_time = manhattan_distance(src, dst)
             print(f"{step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)} ({move_time} minutes)")
+
+            # Show the move with highlighting:
+            # - container being moved in green
+            # - destination in red
+            # - other containers in yellow
+            # - unusable slots in black
+            visMove(execGrid, src=src, dst=dst, highlight_moving=True, highlight_destination=True)
+
             log_event(f"{fmt_cell(src)} was moved to {fmt_cell(dst)}")
-            
-            # Update execGrid to reflect the move
+
+            # Update grid after move
             if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
                 execGrid[dst[0]][dst[1]] = cell_value
             if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
                 execGrid[src[0]][src[1]] = "UNUSED"
             container_info['pos'] = dst
-            
-            # Offer option to add user comment after each move
-            print("Press 'c' to add a comment, or just ENTER to continue: \n", end='')
+
+            # Offer option to add user comment
+            print("Press 'c' to add a comment, or just ENTER to continue: ", end='')
             user_input = input().strip().lower()
             if user_input == 'c':
                 log_user_comment()
-            
+
             step += 1
             crane = dst
 
-    # Return crane to park
+    # -------------------------
+    # 3. Return crane to park
+    # -------------------------
     if crane != PARK_POS:
         move_time = manhattan_distance(crane, PARK_POS)
         print(f"{step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)} ({move_time} minutes)")
+        visMove(execGrid, crane_pos=PARK_POS)  # visualize crane returning
         input("Hit ENTER when done\n")
         step += 1
+
 
     return finalGrid  # Return finalGrid for manifest writing
 
@@ -190,7 +208,7 @@ def main():
         base = os.path.splitext(os.path.basename(path))[0]
         outName = base
 
-        writeOutboundManifest(outName, lines, finalGrid, contents_map)
+        writeOutboundManifest(outName, lines, finalGrid, contents_map, grid)
 
         print(f"\nI have written an updated manifest as {outName}_OUTBOUND.txt")
         log_event(f"Finished a Cycle. Manifest {outName}_OUTBOUND.txt was written to desktop, and a reminder pop-up to operator to send file was displayed.")
