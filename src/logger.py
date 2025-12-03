@@ -47,10 +47,8 @@ class ShipLogger:
         print(f"\nLog file written to: {filepath}")
         return filepath
 
-
 # Global singleton logger instance
 _logger = None
-
 
 def get_logger():
     global _logger
