@@ -25,7 +25,7 @@ def writeOutboundManifest(filename, lines, finalGrid, contentsMap, originalGrid)
 
     # build final outbound file path
     name_no_ext = filename.replace(".txt", "")
-    outName = os.path.join(outFolder, name_no_ext + "_OUTBOUND.txt")
+    outName = os.path.join(outFolder, name_no_ext + "OUTBOUND.txt")
 
     # Build mapping: (original_row, original_col, weight) -> description
     # This uniquely identifies each container even with duplicate weights
