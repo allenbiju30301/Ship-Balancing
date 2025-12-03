@@ -1,15 +1,16 @@
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
 
 class ShipLogger:
     def __init__(self):
         self.log_entries = []
-        self.start_time = datetime.now()
+        self.start_time = (datetime.now(ZoneInfo("America/Los_Angeles")))
         self.log_filename = None
 
     def get_timestamp(self):
         """Return formatted timestamp MM DD YYYY: HH:MM"""
-        now = datetime.now()
+        now = (datetime.now(ZoneInfo("America/Los_Angeles")))
         return now.strftime("%m %d %Y: %H:%M")
 
     def log(self, message):
@@ -23,10 +24,10 @@ class ShipLogger:
         print("\n--- Add a comment to the log ---")
         comment = input("Enter your comment (or press ENTER to skip): ").strip()
         if comment:
-            self.log(comment)
+            self.log(f'A comment was added to the log: "{comment}"')
             print("Comment added to log.\n")
 
-    def write_log_to_desktop(self):
+    def write_log_to_desktop(self, filename):
         """Write the log file to Log folder in the repository"""
         # Get path to the repo root (assumes main.py is inside src/)
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
@@ -35,8 +36,8 @@ class ShipLogger:
         
         # Create filename: KeoghsPort<MM_DD_YYYY_HHMM>.txt
         start = self.start_time
-        filename = f"KeoghsPortLog_{start.strftime('%m_%d_%Y_%H%M')}.txt"
-        filepath = os.path.join(log_folder, filename)
+        name = f"{filename}{start.strftime('%m_%d_%Y_%H%M')}.txt"
+        filepath = os.path.join(log_folder, name)
         
         # Write all log entries
         with open(filepath, 'w') as f:
@@ -65,5 +66,5 @@ def log_user_comment():
     get_logger().log_user_comment()
 
 
-def save_log():
-    return get_logger().write_log_to_desktop()
+def save_log(filename):
+    return get_logger().write_log_to_desktop(filename)

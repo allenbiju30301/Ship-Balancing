@@ -100,8 +100,11 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         # -------------------------
         if crane != src:
             move_time = manhattan_distance(crane, src)
-            print(f"{step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)} ({move_time} minutes)")
+            print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)}, ({move_time} minutes)")
             visMove(execGrid, crane_pos=src)  # show crane moving, no container yet
+
+            log_event(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)}, ({move_time} minutes)")
+
             input("Hit ENTER when done\n")
             step += 1
             crane = src
@@ -117,7 +120,7 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
 
         if container_info:
             move_time = manhattan_distance(src, dst)
-            print(f"{step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)} ({move_time} minutes)")
+            print(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
 
             # Show the move with highlighting:
             # - container being moved in green
@@ -126,7 +129,7 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
             # - unusable slots in black
             visMove(execGrid, src=src, dst=dst, highlight_moving=True, highlight_destination=True)
 
-            log_event(f"{fmt_cell(src)} was moved to {fmt_cell(dst)}")
+            log_event(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
 
             # Update grid after move
             if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
@@ -149,8 +152,11 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
     # -------------------------
     if crane != PARK_POS:
         move_time = manhattan_distance(crane, PARK_POS)
-        print(f"{step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)} ({move_time} minutes)")
+        print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
         visMove(execGrid, crane_pos=PARK_POS)  # visualize crane returning
+
+        log_event(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
+
         input("Hit ENTER when done\n")
         step += 1
 
@@ -173,7 +179,7 @@ def main():
         filename = input("Enter a manifest: (or press ENTER to quit): ").strip()
         if filename == "":
             log_event("Program was shut down.")
-            save_log()
+            save_log(outName)
             print("Goodbye.")
             break
 
@@ -210,8 +216,8 @@ def main():
 
         writeOutboundManifest(outName, lines, finalGrid, contents_map, grid)
 
-        print(f"\nI have written an updated manifest as {outName}_OUTBOUND.txt")
-        log_event(f"Finished a Cycle. Manifest {outName}_OUTBOUND.txt was written to desktop, and a reminder pop-up to operator to send file was displayed.")
+        print(f"\nI have written an updated manifest as {outName}OUTBOUND.txt")
+        log_event(f"Finished a Cycle. Manifest {outName}OUTBOUND.txt was written to the solutions folder, and a reminder pop-up to operator to send file was displayed.")
         
         print("Don't forget to email it to the captain.")
         print("Hit ENTER when done.\n")
