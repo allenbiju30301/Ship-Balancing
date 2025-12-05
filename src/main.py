@@ -1,6 +1,6 @@
 import os
 from readManifest import parseManifest
-from manifest import writeOutboundManifest
+from writeManifest import writeOutboundManifest
 from isBalanced import isShipBalanced
 from AStar import aStar, buildSlotMatrix, manhattan_distance
 from visualize import visualizeGrid as vis
@@ -26,18 +26,14 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
 
     weight_to_container = {c['weight']: c for c in containers}
     
-    # Count total number of steps (crane movements + container movements + return to park)
-    numSteps = 0
+    numSteps = 0     # (crane movements + container movements + return to park)
     crane = PARK_POS
     tempGrid = [row[:] for row in grid]
     
     for src, dst in moves:
-        # Count crane movement to source (if needed)
         if crane != src:
             numSteps += 1
-        # Count container move
         numSteps += 1
-        # Update position for next iteration
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
             w = tempGrid[src[0]][src[1]]
             tempGrid[src[0]][src[1]] = "UNUSED"
@@ -45,29 +41,24 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
                 tempGrid[dst[0]][dst[1]] = w
         crane = dst
     
-    # Count return to park
     if crane != PARK_POS:
         numSteps += 1
     
     print("Solution has been found, it will take")
     print(f"{numSteps} move{'s' if numSteps != 1 else ''}")
 
-    # Compute total time by simulating the execution with the original grid
     total_time = 0
     crane = PARK_POS
-    tempGrid = [row[:] for row in grid]  # Start with original grid state
+    tempGrid = [row[:] for row in grid]  
     
     for src, dst in moves:
-        # Time to move crane to source
         if crane != src:
             d = manhattan_distance(crane, src)
             total_time += d
         
-        # Time to move container from source to destination
         d = manhattan_distance(src, dst)
         total_time += d
         
-        # Update temp grid to reflect the move
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
             w = tempGrid[src[0]][src[1]]
             tempGrid[src[0]][src[1]] = "UNUSED"
@@ -76,7 +67,6 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         
         crane = dst
     
-    # Time to return crane to park
     if crane != PARK_POS:
         d = manhattan_distance(crane, PARK_POS)
         total_time += d
@@ -87,17 +77,12 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
     print("Hit ENTER when ready for first move:\n")
     input()
 
-    # -------------------------
-    # PRINT EXECUTION STEPS WITH FULL VISUALIZATION
-    # -------------------------
+    # PRINT EXECUTION STEPS
     step = 1
     crane = PARK_POS
-    execGrid = [row[:] for row in grid]  # Use ORIGINAL grid
-
+    execGrid = [row[:] for row in grid] 
     for src, dst in moves:
-        # -------------------------
-        # 1. Crane moves to source
-        # -------------------------
+        # Case 1. Crane moves to source
         if crane != src:
             move_time = manhattan_distance(crane, src)
             print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)}, ({move_time} minutes)")
@@ -109,9 +94,7 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
             step += 1
             crane = src
 
-        # -------------------------
-        # 2. Pick up and move container
-        # -------------------------
+        # Case 2. Pick up and move container
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
             cell_value = execGrid[src[0]][src[1]]
             container_info = weight_to_container.get(cell_value, None)
@@ -122,23 +105,17 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
             move_time = manhattan_distance(src, dst)
             print(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
 
-            # Show the move with highlighting:
-            # - container being moved in green
-            # - destination in red
-            # - other containers in yellow
-            # - unusable slots in black
             visMove(execGrid, src=src, dst=dst, highlight_moving=True, highlight_destination=True)
 
             log_event(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
 
-            # Update grid after move
             if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
                 execGrid[dst[0]][dst[1]] = cell_value
             if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
                 execGrid[src[0]][src[1]] = "UNUSED"
             container_info['pos'] = dst
 
-            # Offer option to add user comment
+            # add comment
             print("Press 'c' to add a comment, or just ENTER to continue: ", end='')
             user_input = input().strip().lower()
             if user_input == 'c':
@@ -147,13 +124,11 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
             step += 1
             crane = dst
 
-    # -------------------------
-    # 3. Return crane to park
-    # -------------------------
+    # Case 3. Return crane to park
     if crane != PARK_POS:
         move_time = manhattan_distance(crane, PARK_POS)
         print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
-        visMove(execGrid, crane_pos=PARK_POS)  # visualize crane returning
+        visMove(execGrid, crane_pos=PARK_POS) 
 
         log_event(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
 
@@ -161,11 +136,10 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         step += 1
 
 
-    return finalGrid  # Return finalGrid for manifest writing
+    return finalGrid  
 
 def fmt_cell(rc):
     r, c = rc
-    # Check if this is the park position
     if r == PARK_POS[0] and c == PARK_POS[1]:
         return "park"
     return f"[{r+1:02d},{c+1:02d}]"
@@ -210,14 +184,13 @@ def main():
             if finalGrid is None:
                 continue
 
-        # Clean output filename
         base = os.path.splitext(os.path.basename(path))[0]
         outName = base
 
         writeOutboundManifest(outName, lines, finalGrid, contents_map, grid)
 
         print(f"\nI have written an updated manifest as {outName}OUTBOUND.txt")
-        log_event(f"Finished a Cycle. Manifest {outName}OUTBOUND.txt was written to the solutions folder, and a reminder pop-up to operator to send file was displayed.")
+        log_event(f"Finished a Cycle. Manifest {outName}OUTBOUND.txt was written to the \n\tsolutions folder, and a reminder pop-up to the operator to send the file was displayed.")
         
         print("Don't forget to email it to the captain.")
         print("Hit ENTER when done.\n")

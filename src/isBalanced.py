@@ -16,7 +16,6 @@ def isShipBalanced(grid):
     if count <= 1:
         return True, 0, 0
 
-    # Compute port/star weights for ALL cases
     port = 0
     star = 0
     total = 0
@@ -28,7 +27,7 @@ def isShipBalanced(grid):
         else:
             star += w
 
-    # Two containers → special case: balanced iff they are on opposite sides
+    # Two containers → special case: balanced if they are on opposite sides
     if count == 2:
         _, _, c1 = containers[0]
         _, _, c2 = containers[1]

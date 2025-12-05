@@ -2,35 +2,31 @@
 ROWS = 8
 COLS = 12
 
-# CURRENTLY WOKRING ON VISMOVE
 def visMove(grid, src=None, dst=None, crane_pos=None, highlight_moving=False, highlight_destination=False):
  
-
-    # ANSI color codes
+    # color codes
     RESET = "\033[0m"
     BLACK = "\033[40m"    # unused / NaN
     YELLOW = "\033[43m"   # other containers
     GREEN = "\033[42m"    # moving container
     RED = "\033[41m"      # destination
-    BLUE = "\033[44m"     # optional: crane position
+    BLUE = "\033[44m"     # crane position
     WHITE = "\033[47m"
 
     ROWS = len(grid)
     COLS = len(grid[0])
 
-    # Header
     header = "   " + " ".join(f"{c+1:>3}" for c in range(COLS))
     print("\nShip Layout:\n")
     print(header)
     print("    " + "-" * (COLS * 4 - 1))
 
-    # Flip Y-axis: row 8 on top
     for r in reversed(range(ROWS)):
         row_display = f"{r+1:>2} |"
         for c in range(COLS):
             cell = grid[r][c]
 
-            color = YELLOW  # default: container
+            color = YELLOW 
             if cell == "UNUSED" or cell is None:
                 color = WHITE
             if cell == "NAN":
@@ -42,11 +38,10 @@ def visMove(grid, src=None, dst=None, crane_pos=None, highlight_moving=False, hi
             if crane_pos == (r, c):
                 color = BLUE
 
-            # Display first 3 chars or blank
             content = "   " if cell in ["UNUSED", None] else f"{str(cell)[:3]:>3}"
             row_display += f"{color}{content}{RESET} "
         print(row_display)
-    print("\n")  # extra newline for spacing
+    print("\n")
 
 
 def visualizeGrid(grid):
@@ -62,13 +57,10 @@ def visualizeGrid(grid):
             elif cell == "UNUSED":
                 formatted.append("...")
             elif isinstance(cell, int):
-                # Real container weight
                 formatted.append(f"{cell:03d}")
             else:
-                # Should not occur unless parser is wrong
                 formatted.append("??")
 
-            # Add center divider after column 6 (index 5)
             if col == COLS // 2 - 1:
                 formatted.append("|")
 
