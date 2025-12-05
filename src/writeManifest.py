@@ -11,10 +11,10 @@ def writeOutboundManifest(filename, lines, finalGrid, contentsMap, originalGrid)
     outFolder = os.path.abspath(outFolder)
     os.makedirs(outFolder, exist_ok=True)
 
-    name_no_ext = filename.replace(".txt", "")
-    outName = os.path.join(outFolder, name_no_ext + "OUTBOUND.txt")
+    nameNoExt = filename.replace(".txt", "")
+    outName = os.path.join(outFolder, nameNoExt + "OUTBOUND.txt")
 
-    container_identity = {}
+    containerIdentity = {}
     pattern = r"\[(\d+),(\d+)\],\s*\{(\d+)\},\s*(.*)"
     
     for line in lines:
@@ -26,19 +26,19 @@ def writeOutboundManifest(filename, lines, finalGrid, contentsMap, originalGrid)
             content = match.group(4).strip()
             
             if content not in ("NAN", "UNUSED") and w > 0:
-                container_identity[(r, c, w)] = content
+                containerIdentity[(r, c, w)] = content
     
-    final_to_desc = {}
-    used_containers = set()
+    finalToDesc = {}
+    usedContainers = set()
     
-    for r_final in range(ROWS):
-        for c_final in range(COLS):
-            val = finalGrid[r_final][c_final]
+    for rFinal in range(ROWS):
+        for cFinal in range(COLS):
+            val = finalGrid[rFinal][cFinal]
             if isinstance(val, int):
-                for (r_orig, c_orig, w), desc in container_identity.items():
-                    if w == val and (r_orig, c_orig, w) not in used_containers:
-                        final_to_desc[(r_final, c_final)] = desc
-                        used_containers.add((r_orig, c_orig, w))
+                for (rOrig, cOrig, w), desc in containerIdentity.items():
+                    if w == val and (rOrig, cOrig, w) not in usedContainers:
+                        finalToDesc[(rFinal, cFinal)] = desc
+                        usedContainers.add((rOrig, cOrig, w))
                         break
 
     output = []
@@ -48,9 +48,9 @@ def writeOutboundManifest(filename, lines, finalGrid, contentsMap, originalGrid)
         if re.match(r"\[\d{2},\d{2}\]", line):
             r = index // COLS + 1
             c = index % COLS + 1
-            r_idx, c_idx = r - 1, c - 1
+            rIdx, cIdx = r - 1, c - 1
 
-            val = finalGrid[r_idx][c_idx]
+            val = finalGrid[rIdx][cIdx]
 
             if val == "NAN":
                 weightStr = "00000"
@@ -60,7 +60,7 @@ def writeOutboundManifest(filename, lines, finalGrid, contentsMap, originalGrid)
                 english = "UNUSED"
             elif isinstance(val, int):
                 weightStr = f"{val:05d}"
-                english = final_to_desc.get((r_idx, c_idx), "UNKNOWN")
+                english = finalToDesc.get((rIdx, cIdx), "UNKNOWN")
             else:
                 weightStr = "00000"
                 english = "UNUSED"
