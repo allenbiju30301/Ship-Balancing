@@ -8,7 +8,7 @@ ROWS = 8
 COLS = 12
 PARK_POS = (7, 0)  # Park at [08, 01] in display coordinates
 
-def manhattan_distance(start, goal):
+def manhattanDistance(start, goal):
     return abs(start[0] - goal[0]) + abs(start[1] - goal[1])
 
 def buildSlotMatrix(slotExists):
@@ -17,10 +17,10 @@ def buildSlotMatrix(slotExists):
     for (r, c), exists in slotExists.items():
         # slotExists uses 1-indexed coordinates from manifest
         # Convert to 0-indexed for grid
-        r_idx = r - 1
-        c_idx = c - 1
-        if 0 <= r_idx < ROWS and 0 <= c_idx < COLS:
-            matrix[r_idx][c_idx] = exists
+        rIdx = r - 1
+        cIdx = c - 1
+        if 0 <= rIdx < ROWS and 0 <= cIdx < COLS:
+            matrix[rIdx][cIdx] = exists
     
     return matrix
 
@@ -35,7 +35,7 @@ def supported(grid, r, c):
         return True
     return isinstance(grid[r - 1][c], int)
 
-def bfs_distance(grid, start, goal, ignoreContainers=False):
+def bfsDistance(grid, start, goal, ignoreContainers=False):
     q = deque([(start, 0)])
     seen = {start}
     while q:
@@ -80,8 +80,8 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
     startKey = gridKey(grid)
 
     openSet = []
-    initial_h = imbalance(grid, balanceFunc)
-    heapq.heappush(openSet, (initial_h, 0, 0, next(counter), 0, grid, [], craneStart))
+    initialH = imbalance(grid, balanceFunc)
+    heapq.heappush(openSet, (initialH, 0, 0, next(counter), 0, grid, [], craneStart))
     visited = {(startKey, craneStart): 0}
 
     while openSet:
@@ -92,7 +92,7 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
             return path, layout
 
         # prioritize containers closer to starboard/destinations
-        movable_containers = []
+        movableContainers = []
         for r1 in range(ROWS):
             for c1 in range(COLS):
                 if not slotMatrix[r1][c1]:
@@ -101,11 +101,11 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                     continue
                 if not topOfStack(layout, r1, c1):
                     continue
-                movable_containers.append((r1, c1))
+                movableContainers.append((r1, c1))
         
-        movable_containers.sort(key=lambda pos: (pos[0], -pos[1]))
+        movableContainers.sort(key=lambda pos: (pos[0], -pos[1]))
         
-        for r1, c1 in movable_containers:
+        for r1, c1 in movableContainers:
             w = layout[r1][c1]
 
             # Try placing in all available slots
@@ -118,8 +118,8 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                     if not supported(layout, r2, c2):
                         continue
 
-                    dist1 = manhattan_distance(cranePos, (r1, c1))
-                    dist2 = manhattan_distance((r1, c1), (r2, c2))
+                    dist1 = manhattanDistance(cranePos, (r1, c1))
+                    dist2 = manhattanDistance((r1, c1), (r2, c2))
 
                     newG = g + dist1 + dist2
                     newGrid = deepcopy(layout)

@@ -2,31 +2,28 @@ import os
 from readManifest import parseManifest
 from writeManifest import writeOutboundManifest
 from isBalanced import isShipBalanced
-from AStar import aStar, buildSlotMatrix, manhattan_distance
+from AStar import aStar, buildSlotMatrix, manhattanDistance
 from visualize import visualizeGrid as vis
 from visualize import visMove
-from logger import log_event, log_user_comment, save_log
+from logger import logEvent, logUserComment, saveLog
 
 ROWS = 8
 COLS = 12
 PARK_POS = (7, 0)  # Park at [08, 01] in display coordinates
 
-def manhattan(a, b):
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
-
-def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
+def runInstructions(path, grid, slotMatrix, containers, balanceFunc):
     print(f"\n{os.path.basename(path)} has {len(containers)} containers")
     print("Computing a solution...\n")
 
     moves, finalGrid = aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS)
     if moves is None:
         print("No valid solution could be found.")
-        log_event("No valid balance solution could be found.")
+        logEvent("No valid balance solution could be found.")
         return None
 
-    weight_to_container = {c['weight']: c for c in containers}
+    weightToContainer = {c['weight']: c for c in containers}
     
-    numSteps = 0     # (crane movements + container movements + return to park)
+    numSteps = 0
     crane = PARK_POS
     tempGrid = [row[:] for row in grid]
     
@@ -47,17 +44,17 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
     print("Solution has been found, it will take")
     print(f"{numSteps} move{'s' if numSteps != 1 else ''}")
 
-    total_time = 0
+    totalTime = 0
     crane = PARK_POS
-    tempGrid = [row[:] for row in grid]  
+    tempGrid = [row[:] for row in grid]
     
     for src, dst in moves:
         if crane != src:
-            d = manhattan_distance(crane, src)
-            total_time += d
+            d = manhattanDistance(crane, src)
+            totalTime += d
         
-        d = manhattan_distance(src, dst)
-        total_time += d
+        d = manhattanDistance(src, dst)
+        totalTime += d
         
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
             w = tempGrid[src[0]][src[1]]
@@ -68,77 +65,75 @@ def run_instructions(path, grid, slotMatrix, containers, balanceFunc):
         crane = dst
     
     if crane != PARK_POS:
-        d = manhattan_distance(crane, PARK_POS)
-        total_time += d
+        d = manhattanDistance(crane, PARK_POS)
+        totalTime += d
 
-    print(f"{total_time} minutes (including movement from/to parked position)")
-    log_event(f"Balance solution found, it will require {numSteps} moves/{total_time} minutes.")
+    print(f"{totalTime} minutes (including movement from/to parked position)")
+    logEvent(f"Balance solution found, it will require {numSteps} moves/{totalTime} minutes.")
     
     print("Hit ENTER when ready for first move:\n")
     input()
 
-    # PRINT EXECUTION STEPS
     step = 1
     crane = PARK_POS
-    execGrid = [row[:] for row in grid] 
+    execGrid = [row[:] for row in grid]
+    
     for src, dst in moves:
-        # Case 1. Crane moves to source
+        # Case 1: Crane moves to source
         if crane != src:
-            move_time = manhattan_distance(crane, src)
-            print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)}, ({move_time} minutes)")
-            visMove(execGrid, crane_pos=src)  # show crane moving, no container yet
+            moveTime = manhattanDistance(crane, src)
+            print(f"Step {step}: Move crane from {fmtCell(crane)} to {fmtCell(src)}, ({moveTime} minutes)")
+            visMove(execGrid, cranePos=src)
 
-            log_event(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(src)}, ({move_time} minutes)")
+            logEvent(f"Step {step}: Move crane from {fmtCell(crane)} to {fmtCell(src)}, ({moveTime} minutes)")
 
             input("Hit ENTER when done\n")
             step += 1
             crane = src
 
-        # Case 2. Pick up and move container
+        # Case 2: Pick up and move container
         if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
-            cell_value = execGrid[src[0]][src[1]]
-            container_info = weight_to_container.get(cell_value, None)
+            cellValue = execGrid[src[0]][src[1]]
+            containerInfo = weightToContainer.get(cellValue, None)
         else:
-            container_info = None
+            containerInfo = None
 
-        if container_info:
-            move_time = manhattan_distance(src, dst)
-            print(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
+        if containerInfo:
+            moveTime = manhattanDistance(src, dst)
+            print(f"Step {step}: Move '{containerInfo['description']}' from {fmtCell(src)} to {fmtCell(dst)}, ({moveTime} minutes)")
 
-            visMove(execGrid, src=src, dst=dst, highlight_moving=True, highlight_destination=True)
+            visMove(execGrid, src=src, dst=dst, highlightMoving=True, highlightDestination=True)
 
-            log_event(f"Step {step}: Move '{container_info['description']}' from {fmt_cell(src)} to {fmt_cell(dst)}, ({move_time} minutes)")
+            logEvent(f"Step {step}: Move '{containerInfo['description']}' from {fmtCell(src)} to {fmtCell(dst)}, ({moveTime} minutes)")
 
             if dst != PARK_POS and 0 <= dst[0] < ROWS and 0 <= dst[1] < COLS:
-                execGrid[dst[0]][dst[1]] = cell_value
+                execGrid[dst[0]][dst[1]] = cellValue
             if src != PARK_POS and 0 <= src[0] < ROWS and 0 <= src[1] < COLS:
                 execGrid[src[0]][src[1]] = "UNUSED"
-            container_info['pos'] = dst
+            containerInfo['pos'] = dst
 
-            # add comment
             print("Press 'c' to add a comment, or just ENTER to continue: ", end='')
-            user_input = input().strip().lower()
-            if user_input == 'c':
-                log_user_comment()
+            userInput = input().strip().lower()
+            if userInput == 'c':
+                logUserComment()
 
             step += 1
             crane = dst
 
-    # Case 3. Return crane to park
+    # Case 3: Return crane to park
     if crane != PARK_POS:
-        move_time = manhattan_distance(crane, PARK_POS)
-        print(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
-        visMove(execGrid, crane_pos=PARK_POS) 
+        moveTime = manhattanDistance(crane, PARK_POS)
+        print(f"Step {step}: Move crane from {fmtCell(crane)} to {fmtCell(PARK_POS)}, ({moveTime} minutes)")
+        visMove(execGrid, cranePos=PARK_POS)
 
-        log_event(f"Step {step}: Move crane from {fmt_cell(crane)} to {fmt_cell(PARK_POS)}, ({move_time} minutes)")
+        logEvent(f"Step {step}: Move crane from {fmtCell(crane)} to {fmtCell(PARK_POS)}, ({moveTime} minutes)")
 
         input("Hit ENTER when done\n")
         step += 1
 
+    return finalGrid
 
-    return finalGrid  
-
-def fmt_cell(rc):
+def fmtCell(rc):
     r, c = rc
     if r == PARK_POS[0] and c == PARK_POS[1]:
         return "park"
@@ -146,14 +141,18 @@ def fmt_cell(rc):
 
 
 def main():
-    log_event("Program was started.")
+    logEvent("Program was started.")
+    outName = None
     
     while True:
         print("-------------------------------------------------")
         filename = input("Enter a manifest: (or press ENTER to quit): ").strip()
         if filename == "":
-            log_event("Program was shut down.")
-            save_log(outName)
+            logEvent("Program was shut down.")
+            if outName:
+                saveLog(outName)
+            else:
+                saveLog("default")
             print("Goodbye.")
             break
 
@@ -166,10 +165,10 @@ def main():
         with open(path, "r") as f:
             lines = f.readlines()
 
-        grid, slotExists, containers, contents_map = parseManifest(lines)
+        grid, slotExists, containers, contentsMap = parseManifest(lines)
         slotMatrix = buildSlotMatrix(slotExists)
 
-        log_event(f"Manifest {filename} is opened, there are {len(containers)} containers on the ship.")
+        logEvent(f"Manifest {filename} is opened, there are {len(containers)} containers on the ship.")
 
         balanced, port, star = isShipBalanced(grid)
         
@@ -177,20 +176,20 @@ def main():
         
         if balanced:
             print("\nShip is already legally balanced.")
-            log_event("Ship is already balanced. No moves needed.")
+            logEvent("Ship is already balanced. No moves needed.")
             finalGrid = grid
         else:
-            finalGrid = run_instructions(path, grid, slotMatrix, containers, isShipBalanced)
+            finalGrid = runInstructions(path, grid, slotMatrix, containers, isShipBalanced)
             if finalGrid is None:
                 continue
 
         base = os.path.splitext(os.path.basename(path))[0]
         outName = base
 
-        writeOutboundManifest(outName, lines, finalGrid, contents_map, grid)
+        writeOutboundManifest(outName, lines, finalGrid, contentsMap, grid)
 
         print(f"\nI have written an updated manifest as {outName}OUTBOUND.txt")
-        log_event(f"Finished a Cycle. Manifest {outName}OUTBOUND.txt was written to the \n\tsolutions folder, and a reminder pop-up to the operator to send the file was displayed.")
+        logEvent(f"Finished a Cycle. Manifest {outName}OUTBOUND.txt was written to the \n\tsolutions folder, and a reminder pop-up to the operator to send the file was displayed.")
         
         print("Don't forget to email it to the captain.")
         print("Hit ENTER when done.\n")

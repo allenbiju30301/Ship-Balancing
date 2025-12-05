@@ -32,7 +32,7 @@ def isShipBalanced(grid):
         _, _, c1 = containers[0]
         _, _, c2 = containers[1]
         onOppSides = (c1 < mid and c2 >= mid) or (c2 < mid and c1 >= mid)
-        return onOppSides, port, star  # ← RETURN ACTUAL WEIGHTS
+        return onOppSides, port, star
 
     # Normal rule for 3+ containers
     diff = abs(port - star)
