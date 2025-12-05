@@ -9,18 +9,15 @@ class ShipLogger:
         self.log_filename = None
 
     def get_timestamp(self):
-        """Return formatted timestamp MM DD YYYY: HH:MM"""
         now = (datetime.now(ZoneInfo("America/Los_Angeles")))
         return now.strftime("%m %d %Y: %H:%M")
 
     def log(self, message):
-        """Add a log entry with timestamp"""
         timestamp = self.get_timestamp()
         entry = f"{timestamp} {message}"
         self.log_entries.append(entry)
 
     def log_user_comment(self):
-        """Allow operator to add a custom comment to the log"""
         print("\n--- Add a comment to the log ---")
         comment = input("Enter your comment (or press ENTER to skip): ").strip()
         if comment:
@@ -28,18 +25,14 @@ class ShipLogger:
             print("Comment added to log.\n")
 
     def write_log_to_desktop(self, filename):
-        """Write the log file to Log folder in the repository"""
-        # Get path to the repo root (assumes main.py is inside src/)
         repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         log_folder = os.path.join(repo_root, "Log")
         os.makedirs(log_folder, exist_ok=True)
         
-        # Create filename: KeoghsPort<MM_DD_YYYY_HHMM>.txt
         start = self.start_time
         name = f"{filename}{start.strftime('%m_%d_%Y_%H%M')}.txt"
         filepath = os.path.join(log_folder, name)
         
-        # Write all log entries
         with open(filepath, 'w') as f:
             for entry in self.log_entries:
                 f.write(entry + '\n')
@@ -48,7 +41,6 @@ class ShipLogger:
         print(f"\nLog file written to: {filepath}")
         return filepath
 
-# Global singleton logger instance
 _logger = None
 
 def get_logger():

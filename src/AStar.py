@@ -6,26 +6,12 @@ import itertools
 counter = itertools.count()
 ROWS = 8
 COLS = 12
-PARK_POS = (7, 0)  # Park at [08, 01] in display coordinates (row 8 = index 7, col 1 = index 0)
-
-# ------------------------
-# Utility Functions
-# ------------------------
+PARK_POS = (7, 0)  # Park at [08, 01] in display coordinates
 
 def manhattan_distance(start, goal):
-    """Calculate Manhattan distance between two positions."""
     return abs(start[0] - goal[0]) + abs(start[1] - goal[1])
 
 def buildSlotMatrix(slotExists):
-    """
-    Convert slotExists dictionary to a 2D matrix for faster lookup.
-    
-    Args:
-        slotExists: Dictionary with (row, col) keys and boolean values (1-indexed)
-        
-    Returns:
-        2D list where slotMatrix[r][c] = True if slot exists, False otherwise (0-indexed)
-    """
     matrix = [[False for _ in range(COLS)] for _ in range(ROWS)]
     
     for (r, c), exists in slotExists.items():
@@ -39,23 +25,17 @@ def buildSlotMatrix(slotExists):
     return matrix
 
 def topOfStack(grid, r, c):
-    """Return True if this container is at the top of its stack."""
-    # Check all rows ABOVE this one (higher indices)
     for rr in range(r + 1, ROWS):
         if isinstance(grid[rr][c], int):
             return False
     return True
 
 def supported(grid, r, c):
-    """Return True if a container can be placed at this cell."""
-    # Row 0 is the bottom (Row 01 in display), so it's always supported
     if r == 0:
         return True
-    # For other rows, check if there's a container directly below
     return isinstance(grid[r - 1][c], int)
 
 def bfs_distance(grid, start, goal, ignoreContainers=False):
-    """Return actual crane movement distance using BFS."""
     q = deque([(start, 0)])
     seen = {start}
     while q:
@@ -86,20 +66,13 @@ def bfs_distance(grid, start, goal, ignoreContainers=False):
     return None
 
 def gridKey(grid):
-    """Convert grid to hashable key."""
     return tuple(tuple(row) for row in grid)
 
 def imbalance(grid, balanceFunc):
-    """Compute imbalance metric for A*."""
     b, p, s = balanceFunc(grid)
     return abs(p - s)
 
-# ------------------------
-# A* Search
-# ------------------------
-
 def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
-    """Deterministic A* to balance ship containers."""
     if len(containers) <= 1:
         return [], grid
 
@@ -118,8 +91,7 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
         if balanced:
             return path, layout
 
-        # Deterministic container selection: prioritize containers closer to starboard/destinations
-        # Collect all movable containers first
+        # prioritize containers closer to starboard/destinations
         movable_containers = []
         for r1 in range(ROWS):
             for c1 in range(COLS):
@@ -131,7 +103,6 @@ def aStar(grid, slotMatrix, containers, balanceFunc, craneStart=PARK_POS):
                     continue
                 movable_containers.append((r1, c1))
         
-        # Sort by column (prefer containers closer to middle/starboard for balancing)
         movable_containers.sort(key=lambda pos: (pos[0], -pos[1]))
         
         for r1, c1 in movable_containers:
